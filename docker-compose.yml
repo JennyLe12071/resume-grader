@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  api:
+    build: ./api
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - DATABASE_URL=file:./dev.db
+      - IDP_BASE_URL=${IDP_BASE_URL:-}
+      - IDP_API_KEY=${IDP_API_KEY:-}
+      - LLM_BASE_URL=${LLM_BASE_URL:-}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - STORAGE_DIR=./storage
+    volumes:
+      - ./storage:/app/storage
+    command: npm start
+
+  web:
+    build: ./web
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - api
+    command: npm run preview -- --host 0.0.0.0 --port 3000
+
+
+
