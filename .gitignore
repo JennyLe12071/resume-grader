@@ -104,3 +104,4 @@ Thumbs.db
 
 # Prisma
 prisma/migrations/
+api/storage/

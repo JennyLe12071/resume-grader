@@ -64,6 +64,12 @@ export const resumesApi = {
     return response.data;
   },
 
+  // Upload IDP JSON manually and trigger grading
+  uploadIdp: async (resumeId: string, idpJson: unknown): Promise<{ success: boolean; resumeId: string; grade: any }> => {
+    const response = await api.post(`/resumes/${resumeId}/idp`, idpJson);
+    return response.data;
+  },
+
   // Download PDF
   downloadPdf: async (resumeId: string): Promise<Blob> => {
     const response = await api.get(`/resumes/${resumeId}/pdf`, {

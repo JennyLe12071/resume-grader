@@ -55,10 +55,16 @@ export function JobList() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2>Jobs</h2>
-        <Link to="/jobs/new" className="btn">
-          <Plus size={20} style={{ marginRight: '0.5rem' }} />
-          Create New Job
-        </Link>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <Link to="/manual-grading" className="btn btn-secondary">
+            <FileText size={20} style={{ marginRight: '0.5rem' }} />
+            Manual Grading
+          </Link>
+          <Link to="/jobs/new" className="btn">
+            <Plus size={20} style={{ marginRight: '0.5rem' }} />
+            Create New Job
+          </Link>
+        </div>
       </div>
 
       {jobs.length === 0 ? (
