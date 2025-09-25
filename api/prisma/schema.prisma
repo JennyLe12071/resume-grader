@@ -10,24 +10,59 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Job {
-  jobId          String   @id @default(cuid())
-  title          String
-  jobDescription String
-  createdAt      DateTime @default(now())
-  Resumes        Resume[]
+model Document {
+  docId        String       @id @default(cuid())
+  type         String       // JD|RESUME
+  jobNumber    String
+  content      String       // Base64 encoded PDF bytes
+  contentHash  String
+  mimeType     String       @default("application/pdf")
+  uploadedAt   DateTime     @default(now())
+  extractions  Extraction[]
+  jobResumes   JobResume[]
 }
 
-model Resume {
-  resumeId   String   @id @default(cuid())
-  jobId      String
-  filename   String
-  status     String   // PENDING, FAILED_IDP, FAILED_GRADER, DONE
-  errorText  String?
-  createdAt  DateTime @default(now())
-  idpJson    Json?
-  gradeJson  Json?
-  Job        Job      @relation(fields: [jobId], references: [jobId], onDelete: Cascade)
+model Extraction {
+  extractionId   String   @id @default(cuid())
+  docId          String
+  idpRequestId   String?
+  extractionJson String?  // JSON string
+  status         String   @default("PENDING") // PENDING|PARSED|ERROR
+  createdAt      DateTime @default(now())
+  document       Document @relation(fields: [docId], references: [docId], onDelete: Cascade)
+}
+
+model Job {
+  jobId          String      @id @default(cuid())
+  externalJobRef String      @unique
+  jdDocId        String?
+  status         String      @default("PENDING") // PENDING|PROCESSING|READY|ERROR
+  modelVersion   String      @default("v1")
+  createdAt      DateTime    @default(now())
+  jobResumes     JobResume[]
+  scores         Score[]
+}
+
+model JobResume {
+  jobId        String
+  resumeDocId  String
+  job          Job      @relation(fields: [jobId], references: [jobId], onDelete: Cascade)
+  resume       Document @relation(fields: [resumeDocId], references: [docId], onDelete: Cascade)
+
+  @@id([jobId, resumeDocId])
+}
+
+model Score {
+  scoreId      String   @id @default(cuid())
+  jobId        String
+  resumeDocId  String
+  modelVersion String   @default("v1")
+  finalScore   Float
+  reasonsJson  String   // JSON array of reasons
+  createdAt    DateTime @default(now())
+  job          Job      @relation(fields: [jobId], references: [jobId], onDelete: Cascade)
+
+  @@unique([jobId, resumeDocId, modelVersion])
 }
 
 

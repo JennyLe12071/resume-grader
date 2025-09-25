@@ -11,6 +11,9 @@ export function ResumeDetail() {
   const [resume, setResume] = useState<Resume | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [idpInput, setIdpInput] = useState<string>('');
+  const [idpUploading, setIdpUploading] = useState<boolean>(false);
+  const [idpError, setIdpError] = useState<string | null>(null);
 
   useEffect(() => {
     if (resumeId) {
@@ -44,6 +47,29 @@ export function ResumeDetail() {
     if (score >= 80) return '#27ae60';
     if (score >= 60) return '#f39c12';
     return '#e74c3c';
+  };
+
+  const handleUploadIdp = async () => {
+    if (!resumeId) return;
+    setIdpError(null);
+    setIdpUploading(true);
+    try {
+      let payload: unknown = {};
+      try {
+        payload = JSON.parse(idpInput || '{}');
+      } catch (e) {
+        setIdpError('Invalid JSON');
+        setIdpUploading(false);
+        return;
+      }
+      await resumesApi.uploadIdp(resumeId, payload);
+      await loadResume();
+      setIdpInput('');
+    } catch (e: any) {
+      setIdpError(e?.message || 'Failed to upload IDP JSON');
+    } finally {
+      setIdpUploading(false);
+    }
   };
 
   if (loading) {
@@ -239,6 +265,27 @@ export function ResumeDetail() {
           )}
         </div>
       )}
+
+      {/* Manual IDP JSON Upload */}
+      <div className="card">
+        <h3 style={{ margin: '0 0 1rem 0', color: '#2c3e50' }}>Provide IDP JSON Manually</h3>
+        <p style={{ marginTop: 0, color: '#7f8c8d' }}>Paste the parsed MuleSoft IDP JSON for this resume. This will trigger grading.</p>
+        <textarea
+          value={idpInput}
+          onChange={(e) => setIdpInput(e.target.value)}
+          placeholder='{"name":"...","email":"...", ... }'
+          style={{ width: '100%', minHeight: '160px', fontFamily: 'monospace', fontSize: '0.9rem', padding: '0.75rem' }}
+        />
+        {idpError && (
+          <div className="error" style={{ marginTop: '0.75rem' }}>{idpError}</div>
+        )}
+        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
+          <button className="btn" onClick={handleUploadIdp} disabled={idpUploading}>
+            {idpUploading ? 'Submitting...' : 'Submit IDP JSON'}
+          </button>
+          <button className="btn btn-secondary" onClick={() => setIdpInput('')} disabled={idpUploading}>Clear</button>
+        </div>
+      </div>
 
       {/* Grading Results */}
       {gradeData && (
