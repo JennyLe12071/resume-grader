@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Filter, Download, Star } from 'lucide-react';
+import { ArrowLeft, Filter, Star, RotateCcw } from 'lucide-react';
 
 interface RankingResult {
   resume_doc_id: string;
@@ -24,24 +24,51 @@ export function RunRankings() {
 
   useEffect(() => {
     if (jobId) {
-      fetchResults();
+      setLoading(true);
+      setError(null);
+      // Small delay to ensure route is fully loaded
+      const timer = setTimeout(() => {
+        fetchResults();
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [jobId]);
 
   const fetchResults = async () => {
+    if (!jobId) {
+      setError('No job ID provided');
+      setLoading(false);
+      return;
+    }
+
     try {
+      console.log('Fetching results for jobId:', jobId);
       const response = await fetch(`/api/jobs/${jobId}/results`);
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch results');
+        const errorText = await response.text();
+        console.error('API Error:', errorText);
+        throw new Error(`Failed to fetch results: ${response.status} ${response.statusText}`);
       }
+      
       const data = await response.json();
+      console.log('Results data:', data);
       setResults(data);
       setError(null);
     } catch (err) {
+      console.error('Fetch error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch results');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRetry = () => {
+    console.log('Retry button clicked');
+    setLoading(true);
+    setError(null);
+    fetchResults();
   };
 
   const getScoreColor = (score: number) => {
@@ -58,27 +85,33 @@ export function RunRankings() {
 
   const filteredResults = results?.ranked.filter(result => result.score >= minScore) || [];
 
-  const exportResults = () => {
-    if (!results) return;
+  const handleRerun = async () => {
+    if (!jobId) return;
     
-    const exportData = {
-      job_id: results.job_id,
-      export_date: new Date().toISOString(),
-      total_candidates: results.ranked.length,
-      filtered_candidates: filteredResults.length,
-      min_score_filter: minScore,
-      results: filteredResults
-    };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `resume-rankings-${jobId}-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      console.log('Starting re-run for job:', jobId);
+      setLoading(true);
+      setError(null);
+      
+      // Call the API to restart the job
+      const response = await fetch(`/api/jobs/${jobId}/rerun`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to start re-run');
+      }
+      
+      // Navigate to the job status page to monitor progress
+      navigate(`/run/${jobId}`);
+    } catch (err) {
+      console.error('Re-run error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to start re-run');
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -97,9 +130,34 @@ export function RunRankings() {
       <div className="card">
         <div className="error">
           {error || 'Failed to load rankings'}
-          <button onClick={() => navigate('/')} style={{ marginLeft: '1rem' }}>
-            Back to Roles
-          </button>
+          
+          {/* Debug Info */}
+          <div style={{ 
+            marginTop: '1rem', 
+            padding: '1rem', 
+            background: '#f8f9fa', 
+            borderRadius: '4px',
+            fontSize: '0.875rem',
+            color: '#6c757d'
+          }}>
+            <strong>Debug Info:</strong><br/>
+            Job ID: {jobId || 'Not set'}<br/>
+            Loading: {loading ? 'Yes' : 'No'}<br/>
+            Error: {error || 'None'}<br/>
+            Results: {results ? 'Loaded' : 'Not loaded'}
+          </div>
+          
+          <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+            <button 
+              onClick={handleRetry}
+              className="btn btn-secondary"
+            >
+              Retry
+            </button>
+            <button onClick={() => navigate('/')} className="btn btn-secondary">
+              Back to Roles
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -152,11 +210,12 @@ export function RunRankings() {
           
           <button 
             className="btn btn-secondary"
-            onClick={exportResults}
+            onClick={handleRerun}
+            disabled={loading}
             style={{ display: 'flex', alignItems: 'center' }}
           >
-            <Download size={16} style={{ marginRight: '0.5rem' }} />
-            Export Results
+            <RotateCcw size={16} style={{ marginRight: '0.5rem' }} />
+            {loading ? 'Starting Re-run...' : 'Re-run Job'}
           </button>
         </div>
       </div>

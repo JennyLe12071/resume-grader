@@ -23,6 +23,64 @@ function getJobDescription(jobNumber: string): string {
   }
 }
 
+// GET /api/jobs - Get all jobs (for frontend compatibility)
+router.get('/', async (req, res) => {
+  try {
+    // Get all jobs from database
+    const jobs = await prisma.job.findMany({
+      include: {
+        jobResumes: {
+          include: {
+            resume: true
+          }
+        },
+        scores: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Transform to frontend format
+    const transformedJobs = jobs.map(job => {
+      // Get job description from JD document if available
+      let title = `Job ${job.externalJobRef}`;
+      let jobDescription = 'No job description available';
+
+      if (job.jdDocId) {
+        // For now, use a simple title based on job number
+        // In a real implementation, you'd extract this from the JD document
+        const jobTitles: { [key: string]: string } = {
+          '12345': 'Business Development Manager',
+          '67890': 'Director Strategic Initiatives', 
+          '78901': 'Operations Manager Winchester',
+          '89012': 'Product Manager NHA',
+          '90123': 'Site Manager, Donor Center',
+          '01234': 'Technical Sales Specialist, DS State'
+        };
+        title = jobTitles[job.externalJobRef] || `Job ${job.externalJobRef}`;
+        jobDescription = getJobDescription(job.externalJobRef);
+      }
+
+      return {
+        jobId: job.jobId,
+        title,
+        jobDescription,
+        createdAt: job.createdAt.toISOString(),
+        status: job.status,
+        resumeCount: job.jobResumes.length,
+        completedCount: job.scores.length
+      };
+    });
+
+    res.json(transformedJobs);
+  } catch (error) {
+    console.error('Error getting jobs:', error);
+    res.status(500).json({ 
+      error: 'Failed to get jobs',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // GET /api/roles - Get available roles with completion status
 router.get('/roles', async (req, res) => {
   try {
@@ -92,7 +150,7 @@ router.get('/roles', async (req, res) => {
         }
 
         return {
-          id: jobNumber,
+          id: latestJob ? latestJob.jobId : jobNumber, // Use actual job ID if job exists, otherwise job number
           title,
           jobNumber,
           description: getJobDescription(jobNumber),
@@ -267,6 +325,230 @@ router.get('/:jobId/status', async (req, res) => {
   }
 });
 
+// GET /api/jobs/:jobId - Get job by ID
+router.get('/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+
+    const job = await prisma.job.findUnique({
+      where: { jobId },
+      include: {
+        jobResumes: {
+          include: {
+            resume: true
+          }
+        },
+        scores: true
+      }
+    });
+
+    if (!job) {
+      return res.status(404).json({ 
+        error: 'Job not found',
+        message: `Job with ID ${jobId} does not exist` 
+      });
+    }
+
+    // Transform to frontend format
+    const jobTitles: { [key: string]: string } = {
+      '12345': 'Business Development Manager',
+      '67890': 'Director Strategic Initiatives', 
+      '78901': 'Operations Manager Winchester',
+      '89012': 'Product Manager NHA',
+      '90123': 'Site Manager, Donor Center',
+      '01234': 'Technical Sales Specialist, DS State'
+    };
+    
+    const title = jobTitles[job.externalJobRef] || `Job ${job.externalJobRef}`;
+    const jobDescription = getJobDescription(job.externalJobRef);
+
+    res.json({
+      jobId: job.jobId,
+      title,
+      jobDescription,
+      createdAt: job.createdAt.toISOString(),
+      status: job.status,
+      resumeCount: job.jobResumes.length,
+      completedCount: job.scores.length
+    });
+  } catch (error) {
+    console.error('Error getting job:', error);
+    res.status(500).json({ 
+      error: 'Failed to get job',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// POST /api/jobs/:jobId/resumes - Upload resumes to a job
+router.post('/:jobId/resumes', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    
+    // Check if job exists
+    const job = await prisma.job.findUnique({
+      where: { jobId }
+    });
+
+    if (!job) {
+      return res.status(404).json({ 
+        error: 'Job not found',
+        message: `Job with ID ${jobId} does not exist` 
+      });
+    }
+
+    // For now, return mock response since file upload is not implemented in this API
+    // In a real implementation, you would handle multipart form data here
+    res.json({
+      accepted: [],
+      rejected: [],
+      resumeIds: []
+    });
+  } catch (error) {
+    console.error('Error uploading resumes:', error);
+    res.status(500).json({ 
+      error: 'Failed to upload resumes',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// GET /api/jobs/:jobId/rankings - Get job rankings
+router.get('/:jobId/rankings', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const { failed } = req.query;
+
+    const job = await prisma.job.findUnique({
+      where: { jobId },
+      include: {
+        jobResumes: {
+          include: {
+            resume: {
+              include: {
+                extractions: {
+                  where: { status: 'PARSED' }
+                }
+              }
+            }
+          }
+        },
+        scores: {
+          orderBy: { finalScore: 'desc' }
+        }
+      }
+    });
+
+    if (!job) {
+      return res.status(404).json({ 
+        error: 'Job not found',
+        message: `Job with ID ${jobId} does not exist` 
+      });
+    }
+
+    if (job.status !== 'READY') {
+      return res.status(400).json({
+        error: 'Job not ready',
+        message: `Job status is ${job.status}, not READY`
+      });
+    }
+
+    // Build rankings
+    const rankings = job.scores.map((score: any) => {
+      const jobResume = job.jobResumes.find((jr: any) => jr.resumeDocId === score.resumeDocId);
+      const resume = jobResume?.resume;
+      
+      // Get extraction data for candidate name
+      const extraction = resume?.extractions.find((ext: any) => ext.status === 'PARSED');
+      let candidate = `Resume ${score.resumeDocId.slice(-4)}`;
+      
+      if (extraction?.extractionJson) {
+        try {
+          const data = JSON.parse(extraction.extractionJson);
+          candidate = data.Full_Name || data.name || candidate;
+        } catch (e) {
+          // Use default candidate name
+        }
+      }
+
+      // Parse reasons
+      let reasons: string[] = [];
+      try {
+        reasons = JSON.parse(score.reasonsJson);
+      } catch (e) {
+        reasons = ['No reasons provided'];
+      }
+
+      return {
+        resumeId: score.resumeDocId,
+        filename: candidate,
+        status: 'DONE',
+        finalScore: Math.round(score.finalScore),
+        topReasons: reasons
+      };
+    });
+
+    res.json(rankings);
+  } catch (error) {
+    console.error('Error getting job rankings:', error);
+    res.status(500).json({ 
+      error: 'Failed to get job rankings',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// POST /api/jobs/:jobId/rerun - Re-run a job
+router.post('/:jobId/rerun', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+
+    // Check if job exists
+    const job = await prisma.job.findUnique({
+      where: { jobId },
+      include: {
+        jobResumes: true,
+        scores: true
+      }
+    });
+
+    if (!job) {
+      return res.status(404).json({ 
+        error: 'Job not found',
+        message: `Job with ID ${jobId} does not exist` 
+      });
+    }
+
+    // Reset job status to PENDING
+    await prisma.job.update({
+      where: { jobId },
+      data: {
+        status: 'PENDING'
+      }
+    });
+
+    // Clear existing scores
+    await prisma.score.deleteMany({
+      where: { jobId }
+    });
+
+    // Start processing (async)
+    processJob(jobId).catch(console.error);
+
+    res.json({ 
+      message: 'Job re-run started',
+      job_id: jobId,
+      status: 'PENDING'
+    });
+  } catch (error) {
+    console.error('Error re-running job:', error);
+    res.status(500).json({ 
+      error: 'Failed to re-run job',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // GET /api/jobs/:jobId/results - Get job results
 router.get('/:jobId/results', async (req, res) => {
   try {
@@ -317,7 +599,7 @@ router.get('/:jobId/results', async (req, res) => {
       if (extraction?.extractionJson) {
         try {
           const data = JSON.parse(extraction.extractionJson);
-          candidate = data.name || candidate;
+          candidate = data.Full_Name || data.name || candidate;
         } catch (e) {
           // Use default candidate name
         }

@@ -24,7 +24,7 @@ export function JobCreate() {
       setLoading(true);
       setError(null);
       const response = await jobsApi.create(formData);
-      navigate(`/jobs/${response.jobId}/upload`);
+      navigate(`/run/${response.jobId}`);
     } catch (err) {
       setError('Failed to create job. Please try again.');
       console.error('Error creating job:', err);

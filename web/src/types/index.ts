@@ -56,11 +56,6 @@ export interface CreateJobResponse {
   jobId: string;
 }
 
-export interface UploadResumesResponse {
-  accepted: string[];
-  rejected: string[];
-  resumeIds: string[];
-}
 
 
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, FileText, Clock, TrendingUp } from 'lucide-react';
+import { Play, Clock, TrendingUp } from 'lucide-react';
 
 interface Role {
   id: string;
@@ -14,6 +14,7 @@ interface Role {
   jdCount: number;
   hasDocuments: boolean;
   hasResumes: boolean;
+  isUploaded?: boolean;
 }
 
 export function RolesDashboard() {
@@ -29,12 +30,49 @@ export function RolesDashboard() {
 
   const fetchRoles = async () => {
     try {
-      const response = await fetch('/api/jobs/roles');
-      if (!response.ok) {
-        throw new Error('Failed to fetch roles');
+      // Fetch both hardcoded roles and uploaded job descriptions
+      const [rolesResponse, jobsResponse] = await Promise.all([
+        fetch('/api/jobs/roles'),
+        fetch('/api/jobs')
+      ]);
+      
+      if (!rolesResponse.ok || !jobsResponse.ok) {
+        throw new Error('Failed to fetch data');
       }
-      const data = await response.json();
-      setRoles(data.roles);
+      
+      const rolesData = await rolesResponse.json();
+      const jobsData = await jobsResponse.json();
+      
+      console.log('Fetched roles data:', rolesData);
+      console.log('Fetched jobs data:', jobsData);
+      
+      // Convert job descriptions to role format - only show properly uploaded ones with full titles
+      const jobDescriptionRoles = jobsData
+        .filter((job: any) => job.type === 'job_description')
+        .filter((job: any) => job.title && job.title.length > 10) // Only show jobs with meaningful titles
+        .filter((job: any) => !job.title.match(/^[A-Z]{2,4}\d{3,4}$/)) // Filter out job numbers like TSS001, BD001, etc.
+        .map((job: any) => ({
+          id: job.jobId,
+          title: job.title,
+          jobNumber: job.jobId, // Use jobId as jobNumber for uploaded JDs
+          description: job.jobDescription,
+          completionPercentage: 0,
+          status: 'NOT_STARTED',
+          lastRun: null,
+          resumeCount: 0,
+          jdCount: 1,
+          hasDocuments: true,
+          hasResumes: false,
+          isUploaded: true // Flag to identify uploaded job descriptions
+        }));
+      
+      // Filter out "Unknown Role" entries from hardcoded roles
+      const filteredHardcodedRoles = rolesData.roles.filter((role: any) => role.title !== 'Unknown Role');
+      
+      // Combine hardcoded roles with uploaded job descriptions
+      const allRoles = [...filteredHardcodedRoles, ...jobDescriptionRoles];
+      console.log('Combined roles:', allRoles);
+      setRoles(allRoles);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch roles');
@@ -47,15 +85,31 @@ export function RolesDashboard() {
     setStarting(role.id);
     
     try {
-      const response = await fetch('/api/jobs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          external_job_ref: role.jobNumber
-        })
-      });
+      let response;
+      
+      if (role.isUploaded) {
+        // For uploaded job descriptions, create a job directly
+        response = await fetch('/api/jobs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            job_description_id: role.id // Use the job description ID
+          })
+        });
+      } else {
+        // For hardcoded roles, use the existing logic
+        response = await fetch('/api/jobs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            external_job_ref: role.jobNumber
+          })
+        });
+      }
 
       if (!response.ok) {
         throw new Error('Failed to start job');
@@ -120,8 +174,13 @@ export function RolesDashboard() {
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <h2>Roles Dashboard</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2>Roles Dashboard</h2>
+        </div>
         <p>Select a role to start the resume grading process</p>
+        <p style={{ fontSize: '0.875rem', color: '#7f8c8d' }}>
+          Showing {roles.length} roles
+        </p>
       </div>
 
       <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))' }}>
@@ -143,11 +202,9 @@ export function RolesDashboard() {
                 
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', color: '#7f8c8d', fontSize: '0.875rem' }}>
-                    <FileText size={16} style={{ marginRight: '0.25rem' }} />
                     Job #{role.jobNumber}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', color: role.hasResumes ? '#27ae60' : '#e74c3c', fontSize: '0.875rem' }}>
-                    <FileText size={16} style={{ marginRight: '0.25rem' }} />
                     {role.hasResumes ? `${role.resumeCount} resume${role.resumeCount !== 1 ? 's' : ''}` : 'No resumes'}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', color: getCompletionColor(role.completionPercentage), fontSize: '0.875rem', fontWeight: '500' }}>
@@ -198,7 +255,6 @@ export function RolesDashboard() {
                   disabled
                   style={{ display: 'flex', alignItems: 'center', opacity: 0.6 }}
                 >
-                  <FileText size={16} style={{ marginRight: '0.5rem' }} />
                   No Resumes Available
                 </button>
               ) : role.completionPercentage === 100 ? (

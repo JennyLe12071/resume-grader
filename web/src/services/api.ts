@@ -4,7 +4,6 @@ import {
   Resume, 
   CreateJobRequest, 
   CreateJobResponse, 
-  UploadResumesResponse, 
   Ranking 
 } from '../types';
 
@@ -33,20 +32,6 @@ export const jobsApi = {
     return response.data;
   },
 
-  // Upload resumes to a job
-  uploadResumes: async (jobId: string, files: File[]): Promise<UploadResumesResponse> => {
-    const formData = new FormData();
-    files.forEach(file => {
-      formData.append('files', file);
-    });
-
-    const response = await api.post(`/jobs/${jobId}/resumes`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  },
 
   // Get rankings for a job
   getRankings: async (jobId: string, failed?: boolean): Promise<Ranking[]> => {
@@ -54,6 +39,7 @@ export const jobsApi = {
     const response = await api.get(`/jobs/${jobId}/rankings`, { params });
     return response.data;
   },
+
 };
 
 // Resumes API

@@ -1,5 +1,24 @@
 import { prisma } from '../index';
+import { gradeResumeWithOpenAI, JobDescriptionData, ResumeData } from './llmService';
+import { mockIdpJD, mockIdpResumes } from '../mocks/fixtures';
+import { idpJDToJobDescriptionDataCustom, idpResumeToResumeDataCustom } from '../adapters/idpToApp';
 import crypto from 'crypto';
+
+// MuleSoft IDP Integration
+async function callMuleSoftIDP(filePaths: string[]): Promise<any> {
+  // TODO: Replace with actual MuleSoft IDP API call
+  // For now, return mock data
+  console.log('Calling MuleSoft IDP with file paths:', filePaths);
+  
+  // Simulate API call delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  // Return mock data structure that matches your 18 IDP fields
+  return {
+    jobDescription: mockIdpJD,
+    resumes: mockIdpResumes
+  };
+}
 
 // In-memory queue for MVP
 const processingQueue: string[] = [];
@@ -160,19 +179,18 @@ async function processJDExtraction(docId: string) {
 }
 
 function getMockJDData() {
+  // Use the new mock IDP data and convert it to our format
+  const idpData = mockIdpJD;
+  const convertedData = idpJDToJobDescriptionDataCustom(idpData);
+  
+  // Return in the format expected by the existing code
   return {
-    title: "Senior Software Engineer",
-    requirements: [
-      "5+ years of JavaScript/TypeScript experience",
-      "Strong React and Node.js skills",
-      "Database design and optimization",
-      "Cloud platform experience (AWS/Azure)",
-      "Excellent communication skills"
-    ],
-    description: "We are looking for a Senior Software Engineer to join our team. You will be responsible for designing and developing scalable web applications, mentoring junior developers, and collaborating with cross-functional teams.",
-    experience_level: "Senior",
-    skills: ["JavaScript", "TypeScript", "React", "Node.js", "SQL", "AWS", "Azure"],
-    education: "Bachelor's degree in Computer Science or related field"
+    title: convertedData.title,
+    requirements: convertedData.requirements || [],
+    description: convertedData.description,
+    experience_level: convertedData.experience_level,
+    skills: convertedData.skills || [],
+    education: convertedData.education
   };
 }
 
@@ -243,57 +261,19 @@ async function processResumeExtraction(docId: string) {
 }
 
 function generateMockResumeData() {
-  const names = [
-    "Alexandra Allen", "Jordan Kim", "Marcus Rodriguez", "Sarah Chen", "David Thompson",
-    "Emily Watson", "Michael Park", "Jessica Liu", "Christopher Brown", "Amanda Davis",
-    "Ryan Wilson", "Nicole Garcia", "Kevin Martinez", "Rachel Taylor", "Brandon Anderson"
-  ];
+  // Use the new mock IDP data and convert it to our format
+  const randomResume = mockIdpResumes[Math.floor(Math.random() * mockIdpResumes.length)];
+  const convertedData = idpResumeToResumeDataCustom(randomResume);
   
-  const skills = [
-    ["JavaScript", "TypeScript", "React", "Node.js", "MongoDB"],
-    ["Python", "Django", "PostgreSQL", "Docker", "AWS"],
-    ["Java", "Spring Boot", "MySQL", "Redis", "Kubernetes"],
-    ["C#", ".NET", "SQL Server", "Azure", "Entity Framework"],
-    ["Python", "Machine Learning", "TensorFlow", "Pandas", "Jupyter"],
-    ["JavaScript", "Vue.js", "Express", "MongoDB", "GraphQL"],
-    ["Python", "Flask", "PostgreSQL", "Celery", "Redis"],
-    ["Java", "Hibernate", "Oracle", "Maven", "Jenkins"],
-    ["TypeScript", "Angular", "NestJS", "PostgreSQL", "Docker"],
-    ["Python", "FastAPI", "MongoDB", "Elasticsearch", "Kafka"]
-  ];
-
-  const experiences = [
-    { title: "Senior Software Engineer", years: 6 },
-    { title: "Software Engineer", years: 4 },
-    { title: "Full Stack Developer", years: 5 },
-    { title: "Backend Developer", years: 3 },
-    { title: "Frontend Developer", years: 4 },
-    { title: "DevOps Engineer", years: 5 },
-    { title: "Data Engineer", years: 4 },
-    { title: "Machine Learning Engineer", years: 3 }
-  ];
-
-  const educations = [
-    { degree: "BS", field: "Computer Science" },
-    { degree: "MS", field: "Software Engineering" },
-    { degree: "BS", field: "Information Technology" },
-    { degree: "MS", field: "Data Science" },
-    { degree: "BS", field: "Computer Engineering" }
-  ];
-
-  const name = names[Math.floor(Math.random() * names.length)];
-  const skillSet = skills[Math.floor(Math.random() * skills.length)];
-  const experience = experiences[Math.floor(Math.random() * experiences.length)];
-  const education = educations[Math.floor(Math.random() * educations.length)];
-
+  // Return in the format expected by the existing code
   return {
-    name,
-    email: `${name.toLowerCase().replace(' ', '.')}@example.com`,
-    phone: `555-${Math.floor(Math.random() * 9000) + 1000}`,
-    skills: skillSet,
-    experience: [experience],
-    education: [education],
-    fullText: `${name} is a ${experience.title} with ${experience.years} years of experience. They have expertise in ${skillSet.slice(0, 3).join(', ')} and hold a ${education.degree} in ${education.field}.`
+    name: convertedData.name,
+    email: convertedData.email || `${convertedData.name.toLowerCase().replace(' ', '.')}@example.com`,
+    phone: convertedData.phone || `555-${Math.floor(Math.random() * 9000) + 1000}`,
+    skills: convertedData.skills || [],
+    experience: convertedData.experience || [],
+    education: convertedData.education || [],
+    fullText: convertedData.summary || `${convertedData.name} is an experienced professional with relevant skills and qualifications.`
   };
 }
 
@@ -342,7 +322,20 @@ async function processGrading(jobId: string) {
     }
 
     const resumeData = JSON.parse(resumeExtraction.extractionJson!);
-    const grade = calculateMockGrade(jdData, resumeData);
+    
+    // Convert to proper interfaces for grading using adapter functions
+    const jdForGrading: JobDescriptionData = idpJDToJobDescriptionDataCustom(jdData);
+    const resumeForGrading: ResumeData = idpResumeToResumeDataCustom(resumeData);
+    
+    // Use OpenAI for grading if API key is available, otherwise fallback to mock
+    let grade;
+    if (process.env.OPENAI_API_KEY) {
+      console.log(`Using OpenAI for grading resume: ${jobResume.resumeDocId}`);
+      grade = await gradeResumeWithOpenAI(jdForGrading, resumeForGrading);
+    } else {
+      console.log(`OpenAI API key not configured, using mock grading for: ${jobResume.resumeDocId}`);
+      grade = calculateMockGrade(jdForGrading, resumeForGrading);
+    }
 
     // Save score
     await prisma.score.create({
@@ -359,7 +352,7 @@ async function processGrading(jobId: string) {
   console.log(`Grading completed for job ${jobId}`);
 }
 
-function calculateMockGrade(jdData: any, resumeData: any): { finalScore: number; topReasons: string[] } {
+function calculateMockGrade(jdData: JobDescriptionData, resumeData: ResumeData): { finalScore: number; topReasons: string[] } {
   let score = 50; // Base score
   const reasons: string[] = [];
 

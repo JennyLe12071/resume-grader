@@ -163,14 +163,9 @@ export function JobRankings() {
             <p>
               {showFailed 
                 ? 'No failed resumes to display' 
-                : 'No completed resumes found. Upload some resumes to get started.'
+                : 'No completed resumes found. Resumes are pre-loaded in the system.'
               }
             </p>
-            {!showFailed && (
-              <Link to={`/jobs/${jobId}/upload`} className="btn" style={{ marginTop: '1rem' }}>
-                Upload Resumes
-              </Link>
-            )}
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>

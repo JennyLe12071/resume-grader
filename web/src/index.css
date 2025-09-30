@@ -183,25 +183,6 @@ button:focus-visible {
   background: #c0392b;
 }
 
-.upload-area {
-  border: 2px dashed #bdc3c7;
-  border-radius: 12px;
-  padding: 3rem;
-  text-align: center;
-  background: #f8f9fa;
-  transition: all 0.2s;
-  cursor: pointer;
-}
-
-.upload-area:hover {
-  border-color: #3498db;
-  background: #ecf0f1;
-}
-
-.upload-area.dragover {
-  border-color: #3498db;
-  background: #e3f2fd;
-}
 
 .file-list {
   margin-top: 1rem;
@@ -356,6 +337,11 @@ button:focus-visible {
 .nav a.active {
   background: #3498db;
   color: white;
+}
+
+/* Spinning animation for refresh button */
+.spinning {
+  animation: spin 1s linear infinite;
 }
 
 
