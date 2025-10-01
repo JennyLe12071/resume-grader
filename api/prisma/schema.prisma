@@ -29,13 +29,26 @@ model Extraction {
   document       Document @relation(fields: [docId], references: [docId], onDelete: Cascade)
 }
 
+model Role {
+  roleId         String   @id @default(cuid())
+  externalJobRef String   @unique
+  title          String
+  description    String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  jobs           Job[]
+}
+
 model Job {
   jobId          String      @id @default(cuid())
   externalJobRef String      @unique
+  roleId         String?
   jdDocId        String?
   status         String      @default("PENDING")
   modelVersion   String      @default("v1")
   createdAt      DateTime    @default(now())
+  role           Role?       @relation(fields: [roleId], references: [roleId])
   jobResumes     JobResume[]
   scores         Score[]
 }
