@@ -31,20 +31,30 @@ function estimateYears(range?: string): number {
  * Optimized for performance with minimal data processing
  */
 export function idpJDToJobDescriptionDataCustom(idpJD: any): JobDescriptionData {
-  // Build comprehensive description including employment type, travel, and responsibilities
+  // Build comprehensive description including employment type, location, and responsibilities
   let description = idpJD.Summary ?? "";
   
   if (idpJD.Employment_Type) {
     description += `\n\nEmployment Type: ${idpJD.Employment_Type}`;
   }
-  if (idpJD.Travel && idpJD.Travel !== "Not Found") {
-    description += `\nTravel Required: ${idpJD.Travel}`;
+  if (idpJD.Job_Location) {
+    description += `\nLocation: ${idpJD.Job_Location}`;
   }
-  if (idpJD.Responsibilities?.Responsibility_Duties?.length > 0) {
-    description += `\n\nKey Responsibilities:\n• ${idpJD.Responsibilities.Responsibility_Duties.join('\n• ')}`;
+  if (idpJD.FLSA_Status) {
+    description += `\nFLSA Status: ${idpJD.FLSA_Status}`;
   }
-  if (idpJD.Compliance?.Compliance_Regulatory?.length > 0) {
-    description += `\n\nCompliance Requirements:\n• ${idpJD.Compliance.Compliance_Regulatory.join('\n• ')}`;
+  if (idpJD.Responsibilities?.Responsibilities_Duties?.length > 0) {
+    description += `\n\nKey Responsibilities:\n• ${idpJD.Responsibilities.Responsibilities_Duties.join('\n• ')}`;
+  }
+  if (idpJD.Work_Environment?.Work_Environment?.length > 0) {
+    description += `\n\nWork Environment:\n• ${idpJD.Work_Environment.Work_Environment.join('\n• ')}`;
+  }
+  // Compliance requirements removed - these are job requirements, not candidate qualifications
+  // if (idpJD.Compliance?.Compliance_Regulatory?.length > 0) {
+  //   description += `\n\nCompliance Requirements:\n• ${idpJD.Compliance.Compliance_Regulatory.join('\n• ')}`;
+  // }
+  if (idpJD.Certifications_Licenses?.Certifications?.length > 0) {
+    description += `\n\nCertifications/Licenses:\n• ${idpJD.Certifications_Licenses.Certifications.join('\n• ')}`;
   }
 
   return {
@@ -68,11 +78,18 @@ export function idpResumeToResumeDataCustom(idpCV: any): ResumeData {
       parseInt(idpCV.total_years_experience.replace(/\D/g, '')) || 0 : 
       idpCV.total_years_experience) : 0;
 
+  // Combine all skills from different sources
+  const allSkills = [
+    ...(idpCV.skills_core ?? []),
+    ...(idpCV.tools_platforms ?? []),
+    ...(idpCV.domains_experience ?? [])
+  ];
+
   return {
     name: idpCV.Full_Name,
-    email: idpCV.email,
-    phone: idpCV.phone,
-    skills: [...new Set([...(idpCV.skills_core ?? []), ...(idpCV.tools_platforms ?? [])])],
+    email: idpCV.Email_Address,
+    phone: idpCV.Phone_Number,
+    skills: [...new Set(allSkills)], // Remove duplicates
     experience: (idpCV.Work_Experience ?? []).map((w: any) => ({
       company: w.Company,
       position: w.Job_Title,
@@ -84,7 +101,7 @@ export function idpResumeToResumeDataCustom(idpCV: any): ResumeData {
       field: edu.Degree.split(' in ')[1] || "",
       institution: edu.Institution || ""
     })),
-    summary: `${idpCV.Full_Name} is a professional with ${idpCV.total_years_experience} years of experience in ${idpCV.skills_core?.slice(0, 3).join(', ') || 'relevant fields'}.`
+    summary: `${idpCV.Full_Name} is a professional with ${idpCV.total_years_experience} years of experience in ${idpCV.domains_experience?.slice(0, 3).join(', ') || idpCV.skills_core?.slice(0, 3).join(', ') || 'relevant fields'}. Education: ${idpCV.education_highest_level || 'Not specified'}.`
   };
 }
 

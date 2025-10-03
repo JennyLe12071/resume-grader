@@ -1,56 +1,77 @@
 // Mock fixtures that simulate real MuleSoft IDP output
+// These match the exact contract that real MuleSoft IDP would return
 
+export interface MockIdpExtraction {
+  jobKey: string;
+  itemId: string;
+  extractionJson: string;
+  extractionVersion: string;
+  status: string;
+  createdAt: string;
+}
+
+// Mock JD extraction data
 export const mockIdpJD = {
   Job_Title: "Business Development Manager",
+  Summary: "We are seeking a dynamic Business Development Manager to drive growth and expand our market presence in the life sciences industry. This role involves identifying new business opportunities, building strategic partnerships, and developing relationships with pharmaceutical, biotech, and diagnostics companies. The successful candidate will be responsible for achieving sales targets, preparing proposals, and representing our company's products and services to key clients.",
+  FLSA_Status: "Exempt",
+  Job_Location: "San Diego, CA",
   Employment_Type: "Full-time",
-  Travel: "Not Found",
-  Summary: "This position will ensure compliance with Environmental Health and Safety (EHS) policies, State Departments of Health, Good Documentation Practices (GDP), Good Laboratory Practice (GLP), Good Manufacturing Practices (GMP), Good Clinical Practices (GCP), Good Laboratory Practice (GLP), Standard Operating Procedures (SOPs), EMEA and FDA Guidelines, general State and Country Regulations such as but not limited to (CLIA, CAP, USP, ISO 9001, USDA regulations, HTA license, DEA and State Controlled Substance programs) where site appropriate.",
-  Experience: {
-    Required_Experience: [
-      "sales or business development experience representing complex life science products and/or services to pharmaceutical, biotech and diagnostics companies"
-    ]
-  },
-  Qualifications: {
-    Qualifications_Required: [
-      "At least 3 years sales or business development experience representing complex life science products and/or services to pharmaceutical, biotech and diagnostics companies"
-    ],
-    Qualifications_Preferred: []
-  },
   Skills: {
     Skills: [
       "Microsoft Excel",
       "Word",
-      "Outlook"
+      "Outlook",
+      "Business Development",
+      "Sales Strategy",
+      "Life Sciences"
     ]
   },
   Education: {
     Education: "BA/BS in science or business related field, plus 4 years commercial life science experience (microbiology, biology, chemistry or biochemistry preferred)"
   },
+  Experience: {
+    Required_Experience: [
+      "At least 3 years sales or business development experience representing complex life science products and/or services to pharmaceutical, biotech and diagnostics companies"
+    ]
+  },
+  Qualifications: {
+    Qualifications_Required: [
+      "Bachelor's degree in science or business related field",
+      "3+ years of sales or business development experience in life sciences"
+    ],
+    Qualifications_Preferred: [
+      "Advanced degree preferred",
+      "Experience with pharmaceutical and biotech clients"
+    ]
+  },
   Responsibilities: {
-    Responsibility_Duties: [
+    Responsibilities_Duties: [
       "Responsible for achieving regional sales targets on a quarterly basis in accordance with the annual corporate sales plan",
       "Help with the preparation of proposals in collaboration with your colleagues in operations",
       "Negotiate complex business arrangements",
       "Maintain and enhance the Company's value proposition and professional reputation by displaying the highest levels, of professionalism, competence, and personal integrity"
     ]
   },
-  Compliance: {
-    Compliance_Regulatory: [
-      "CLIA",
-      "CAP",
-      "USP",
-      "ISO 9001",
-      "USDA regulations",
-      "HTA license",
-      "DEA and State Controlled Substance programs"
+  Work_Environment: {
+    Work_Environment: [
+      "Office environment with frequent travel to client sites",
+      "Remote work flexibility available",
+      "Occasional evening and weekend work required"
+    ]
+  },
+  Certifications_Licenses: {
+    Certifications: [
+      "Valid driver's license required",
+      "Professional certifications in life sciences preferred"
     ]
   }
 };
 
 export const mockIdpResume = {
   Full_Name: "Paul Sung",
-  email: "pauldohyunsung@gmail.com",
-  phone: "213-804-3732",
+  Email_Address: "pauldohyunsung@gmail.com",
+  Phone_Number: "213-804-3732",
   city: "San Diego",
   state_or_region: "CA",
   country: "United States",
@@ -71,7 +92,13 @@ export const mockIdpResume = {
     "Excel",
     "PowerPoint"
   ],
-  certifications_licenses: "not found",
+  domains_experience: [
+    "Life Sciences",
+    "Pharmaceutical",
+    "Biotech"
+  ],
+  certifications_licences: "not found",
+  education_highest_level: "Ph.D.",
   Work_Experience: [
     {
       Company: "Polypeptide Laboratories",
@@ -95,8 +122,8 @@ export const mockIdpResume = {
 export const mockIdpResumes = [
   {
     Full_Name: "Sarah Martinez",
-    email: "sarah.martinez@email.com",
-    phone: "617-234-5678",
+    Email_Address: "sarah.martinez@email.com",
+    Phone_Number: "617-234-5678",
     city: "Boston",
     state_or_region: "MA",
     country: "United States",
@@ -119,7 +146,13 @@ export const mockIdpResumes = [
       "CRM Systems",
       "Salesforce"
     ],
-    certifications_licenses: "not found",
+    domains_experience: [
+      "Life Sciences",
+      "Pharmaceutical", 
+      "Biotech"
+    ],
+    certifications_licences: "not found",
+    education_highest_level: "Master's",
     Work_Experience: [
       {
         Company: "BioTech Solutions",
@@ -137,199 +170,169 @@ export const mockIdpResumes = [
       {
         Degree: "Master of Science in Biology",
         Institution: "Harvard University",
-        Graduation_Year: "2020"
-      }
-    ]
-  },
-  {
-    Full_Name: "Michael Chen",
-    email: "michael.chen@email.com",
-    phone: "212-345-6789",
-    city: "New York",
-    state_or_region: "NY",
-    country: "United States",
-    skills_core: [
-      "Sales Management",
-      "Pharmaceutical Industry",
-      "Key Account Management",
-      "Business Development",
-      "Life Sciences",
-      "Client Relations",
-      "Market Research",
-      "Strategic Planning",
-      "Team Leadership",
-      "Revenue Growth"
-    ],
-    total_years_experience: "8",
-    tools_platforms: [
-      "Microsoft Office",
-      "CRM Software",
-      "Sales Analytics",
-      "Power BI"
-    ],
-    certifications_licenses: "Pharmaceutical Sales Certification",
-    Work_Experience: [
-      {
-        Company: "PharmaCorp International",
-        Job_Title: "Senior Sales Manager",
-        Employment_Dates: "2018 - present",
-        Responsibilities: [
-          "Managed key accounts in pharmaceutical and biotech sectors",
-          "Led sales team of 12 professionals across multiple regions",
-          "Developed new business opportunities worth $15M+ annually",
-          "Exceeded quarterly targets by 30% consistently"
-        ]
-      }
-    ],
-    Education: [
-      {
-        Degree: "Bachelor of Science in Chemistry",
-        Institution: "MIT",
         Graduation_Year: "2018"
       }
     ]
   },
   {
-    Full_Name: "Emily Rodriguez",
-    email: "emily.rodriguez@email.com",
-    phone: "215-456-7890",
-    city: "Philadelphia",
-    state_or_region: "PA",
+    Full_Name: "Michael Chen",
+    Email_Address: "michael.chen@email.com",
+    Phone_Number: "415-987-6543",
+    city: "San Francisco",
+    state_or_region: "CA",
     country: "United States",
     skills_core: [
-      "Strategic Partnerships",
-      "Healthcare Management",
-      "Market Strategy",
-      "Business Development",
-      "Life Sciences",
-      "Client Relations",
-      "Proposal Development",
-      "Negotiation",
-      "Project Management",
-      "Financial Analysis"
-    ],
-    total_years_experience: "5",
-    tools_platforms: [
-      "Microsoft Office",
-      "Project Management Software",
-      "CRM Systems",
-      "Data Analytics Tools"
-    ],
-    certifications_licenses: "PMP Certification",
-    Work_Experience: [
-      {
-        Company: "MedPartners Global",
-        Job_Title: "Business Development Specialist",
-        Employment_Dates: "2021 - present",
-        Responsibilities: [
-          "Developed strategic partnerships in healthcare and life sciences sectors",
-          "Expanded market presence across multiple regions",
-          "Generated $3M+ in new business opportunities",
-          "Led cross-functional team initiatives and proposal development"
-        ]
-      }
-    ],
-    Education: [
-      {
-        Degree: "Master of Business Administration",
-        Institution: "Wharton School",
-        Graduation_Year: "2021"
-      }
-    ]
-  },
-  {
-    Full_Name: "David Thompson",
-    email: "david.thompson@email.com",
-    phone: "312-567-8901",
-    city: "Chicago",
-    state_or_region: "IL",
-    country: "United States",
-    skills_core: [
-      "Business Development",
-      "Healthcare Industry",
-      "Strategic Planning",
-      "Life Sciences",
+      "Technical Sales",
+      "Product Management",
+      "Biotechnology",
+      "Scientific Writing",
+      "Customer Support",
+      "Market Research",
+      "Training",
+      "Problem Solving",
       "Team Leadership",
-      "Revenue Growth",
-      "Client Relations",
-      "Market Analysis",
-      "Partnership Development",
-      "Executive Management"
-    ],
-    total_years_experience: "12",
-    tools_platforms: [
-      "Microsoft Office",
-      "CRM Systems",
-      "Financial Modeling",
-      "Market Research Tools"
-    ],
-    certifications_licenses: "Executive MBA",
-    Work_Experience: [
-      {
-        Company: "LifeSciences Corporation",
-        Job_Title: "Director of Business Development",
-        Employment_Dates: "2017 - present",
-        Responsibilities: [
-          "Led business development team of 20+ professionals",
-          "Strategic initiatives across multiple healthcare verticals",
-          "Generated $50M+ in annual revenue",
-          "Established partnerships with major healthcare systems and pharmaceutical companies"
-        ]
-      }
-    ],
-    Education: [
-      {
-        Degree: "Master of Science in Biotechnology",
-        Institution: "Northwestern University",
-        Graduation_Year: "2017"
-      }
-    ]
-  },
-  {
-    Full_Name: "Lisa Wang",
-    email: "lisa.wang@email.com",
-    phone: "206-678-9012",
-    city: "Seattle",
-    state_or_region: "WA",
-    country: "United States",
-    skills_core: [
-      "Business Development",
-      "Life Sciences",
-      "Technology Integration",
-      "Healthcare Partnerships",
-      "Digital Health",
-      "Strategic Planning",
-      "Client Relations",
-      "Market Analysis",
-      "Proposal Writing",
       "Project Management"
     ],
-    total_years_experience: "7",
+    total_years_experience: "4",
     tools_platforms: [
       "Microsoft Office",
-      "CRM Systems",
-      "Data Analytics",
-      "Project Management Software"
+      "JIRA",
+      "Confluence",
+      "Google Analytics"
     ],
-    certifications_licenses: "not found",
+    domains_experience: [
+      "Biotechnology",
+      "Technical Sales",
+      "Product Management"
+    ],
+    certifications_licences: "PMP Certification",
+    education_highest_level: "Bachelor's",
     Work_Experience: [
       {
-        Company: "Digital Health Solutions",
-        Job_Title: "Business Development Manager",
-        Employment_Dates: "2019 - present",
+        Company: "GeneTech Corp",
+        Job_Title: "Technical Sales Specialist",
+        Employment_Dates: "2021 - present",
         Responsibilities: [
-          "Specialized in digital health partnerships and technology integration",
-          "Led digital transformation initiatives in healthcare systems",
-          "Generated $20M+ in digital health revenue",
-          "Developed strategic partnerships with healthcare technology companies"
+          "Provided technical expertise to support sales of biotech products",
+          "Conducted product demonstrations and training sessions",
+          "Collaborated with R&D team to address customer technical requirements",
+          "Achieved 110% of annual sales quota"
         ]
       }
     ],
     Education: [
       {
-        Degree: "Master of Science in Computer Science",
-        Institution: "University of Washington",
-        Graduation_Year: "2019"
+        Degree: "Bachelor of Science in Biochemistry",
+        Institution: "UC Berkeley",
+        Graduation_Year: "2020"
+      }
+    ]
+  },
+  {
+    Full_Name: "Jennifer Williams",
+    Email_Address: "jennifer.williams@email.com",
+    Phone_Number: "858-555-0123",
+    city: "San Diego",
+    state_or_region: "CA",
+    country: "United States",
+    skills_core: [
+      "Sales Management",
+      "Business Strategy",
+      "Client Relationship Management",
+      "Revenue Growth",
+      "Team Building",
+      "Market Expansion",
+      "Contract Negotiation",
+      "Performance Analysis",
+      "Strategic Planning",
+      "Leadership"
+    ],
+    total_years_experience: "8",
+    tools_platforms: [
+      "Salesforce",
+      "HubSpot",
+      "Microsoft Excel",
+      "Tableau"
+    ],
+    domains_experience: [
+      "Life Sciences",
+      "Pharmaceutical",
+      "Business Development"
+    ],
+    certifications_licences: "Certified Sales Professional (CSP)",
+    education_highest_level: "Master's",
+    Work_Experience: [
+      {
+        Company: "LifeScience Partners",
+        Job_Title: "Senior Business Development Manager",
+        Employment_Dates: "2019 - present",
+        Responsibilities: [
+          "Managed portfolio of pharmaceutical and biotech clients",
+          "Led team of 5 business development representatives",
+          "Developed strategic partnerships resulting in 40% revenue increase",
+          "Implemented new CRM system improving team efficiency by 30%"
+        ]
+      }
+    ],
+    Education: [
+      {
+        Degree: "Master of Business Administration (MBA)",
+        Institution: "Stanford Graduate School of Business",
+        Graduation_Year: "2016"
+      }
+    ]
+  },
+  {
+    Full_Name: "David Rodriguez",
+    Email_Address: "david.rodriguez@email.com",
+    Phone_Number: "512-444-7890",
+    city: "Austin",
+    state_or_region: "TX",
+    country: "United States",
+    skills_core: [
+      "Account Management",
+      "Business Development",
+      "Sales Operations",
+      "Customer Success",
+      "Data Analysis",
+      "Process Improvement",
+      "Relationship Building",
+      "Presentation Skills",
+      "Market Analysis",
+      "Strategic Thinking"
+    ],
+    total_years_experience: "3",
+    tools_platforms: [
+      "Microsoft Office Suite",
+      "Salesforce",
+      "LinkedIn Sales Navigator",
+      "Zoom"
+    ],
+    domains_experience: [
+      "Business Development",
+      "Sales Operations",
+      "Account Management"
+    ],
+    certifications_licences: "not found",
+    education_highest_level: "Bachelor's",
+    Work_Experience: [
+      {
+        Company: "BioMed Solutions",
+        Job_Title: "Business Development Associate",
+        Employment_Dates: "2022 - present",
+        Responsibilities: [
+          "Supported senior business development team in client acquisition",
+          "Conducted market research and competitive analysis",
+          "Prepared proposals and presentations for potential clients",
+          "Maintained CRM database and generated sales reports"
+        ]
+      }
+    ],
+    Education: [
+      {
+        Degree: "Bachelor of Science in Marketing",
+        Institution: "University of Texas at Austin",
+        Graduation_Year: "2021"
       }
     ]
   }

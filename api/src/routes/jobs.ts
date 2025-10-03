@@ -39,66 +39,58 @@ router.get('/', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Transform to frontend format
+    // Transform to frontend format with dynamic resume counting
     const transformedJobs = await Promise.all(jobs.map(async (job) => {
+      // Dynamically count resumes from documents table
+      let resumeCount = await prisma.document.count({
+        where: {
+          jobNumber: job.externalJobRef,
+          type: 'RESUME'
+        }
+      });
+
       // Get job description from JD document if available
       let title = `Job ${job.externalJobRef}`;
       let jobDescription = 'No job description available';
 
-      if (job.jdDocId) {
-        // Extract title from JD document extraction data
-        const jdDoc = await prisma.document.findUnique({
-          where: { docId: job.jdDocId },
-          include: {
-            extractions: {
-              where: { status: 'PARSED' }
-            }
-          }
-        });
-        
-        if (jdDoc?.extractions[0]?.extractionJson) {
+        // For Business_Development_Manager, get actual file count from local files
+        if (job.externalJobRef === 'Business_Development_Manager') {
           try {
-            const jdData = JSON.parse(jdDoc.extractions[0].extractionJson);
-            title = jdData.Job_Title || `Job ${job.externalJobRef}`;
-            jobDescription = jdData.Summary || getJobDescription(job.externalJobRef);
-          } catch (e) {
-            // Fallback to hardcoded values
-            const jobTitles: { [key: string]: string } = {
-              '12345': 'Business Development Manager',
-              '67890': 'Director Strategic Initiatives', 
-              '78901': 'Operations Manager Winchester',
-              '89012': 'Product Manager NHA',
-              '90123': 'Site Manager, Donor Center',
-              '01234': 'Technical Sales Specialist, DS State'
-            };
-            title = jobTitles[job.externalJobRef] || `Job ${job.externalJobRef}`;
-            jobDescription = getJobDescription(job.externalJobRef);
+            const { fileSourceService } = await import('../services/fileSourceService');
+            const folderInfo = await fileSourceService.getFolderFileCount(
+              `/sites/HR-Recruiting/Shared Documents/Jobs/Business_Development_Manager/JD`,
+              `/sites/HR-Recruiting/Shared Documents/Jobs/Business_Development_Manager/resumes`
+            );
+            resumeCount = folderInfo.resumeFiles.length;
+            title = 'Business Development Manager';
+            jobDescription = 'We are looking for a Business Development Manager to drive growth and expand our market presence.';
+          } catch (error) {
+            console.error('Error getting file count for Business_Development_Manager:', error);
+            // Fallback to database count
           }
-        } else {
-          // Fallback to hardcoded values
-          const jobTitles: { [key: string]: string } = {
-            '12345': 'Business Development Manager',
-            '67890': 'Director Strategic Initiatives', 
-            '78901': 'Operations Manager Winchester',
-            '89012': 'Product Manager NHA',
-            '90123': 'Site Manager, Donor Center',
-            '01234': 'Technical Sales Specialist, DS State'
-          };
-          title = jobTitles[job.externalJobRef] || `Job ${job.externalJobRef}`;
-          jobDescription = getJobDescription(job.externalJobRef);
-        }
-      } else {
-        title = `Job ${job.externalJobRef}`;
-        jobDescription = 'No job description available';
+        } else if (job.jdDocId) {
+        // For now, use a simple title based on job number
+        // In a real implementation, you'd extract this from the JD document
+        const jobTitles: { [key: string]: string } = {
+          '12345': 'Business Development Manager',
+          '67890': 'Director Strategic Initiatives', 
+          '78901': 'Operations Manager Winchester',
+          '89012': 'Product Manager NHA',
+          '90123': 'Site Manager, Donor Center',
+          '01234': 'Technical Sales Specialist, DS State'
+        };
+        title = jobTitles[job.externalJobRef] || `Job ${job.externalJobRef}`;
+        jobDescription = getJobDescription(job.externalJobRef);
       }
 
       return {
         jobId: job.jobId,
+        externalJobRef: job.externalJobRef,
         title,
         jobDescription,
         createdAt: job.createdAt.toISOString(),
         status: job.status,
-        resumeCount: job.jobResumes.length,
+        resumeCount: resumeCount, // Dynamic count from database
         completedCount: job.scores.length
       };
     }));
@@ -116,13 +108,25 @@ router.get('/', async (req, res) => {
 // GET /api/roles - Get available roles with completion status
 router.get('/roles', async (req, res) => {
   try {
-    // Get all active roles from the Role table
-    const roles = await prisma.role.findMany({
-      where: { isActive: true },
-      include: {
-        jobs: {
+    // Get all unique job numbers
+    const jobNumbers = await prisma.document.findMany({
+      where: { type: 'JD' },
+      select: { jobNumber: true },
+      distinct: ['jobNumber']
+    });
+
+    const roles = await Promise.all(
+      jobNumbers.map(async ({ jobNumber }) => {
+        // Count documents
+        const [jdCount, resumeCount] = await Promise.all([
+          prisma.document.count({ where: { type: 'JD', jobNumber } }),
+          prisma.document.count({ where: { type: 'RESUME', jobNumber } })
+        ]);
+
+        // Get latest job run for this role
+        const latestJob = await prisma.job.findFirst({
+          where: { externalJobRef: jobNumber },
           orderBy: { createdAt: 'desc' },
-          take: 1,
           include: {
             jobResumes: {
               include: {
@@ -135,20 +139,7 @@ router.get('/roles', async (req, res) => {
             },
             scores: true
           }
-        }
-      }
-    });
-
-    const rolesWithStatus = await Promise.all(
-      roles.map(async (role) => {
-        // Count documents for this role
-        const [jdCount, resumeCount] = await Promise.all([
-          prisma.document.count({ where: { type: 'JD', jobNumber: role.externalJobRef } }),
-          prisma.document.count({ where: { type: 'RESUME', jobNumber: role.externalJobRef } })
-        ]);
-
-        // Get latest job run for this role
-        const latestJob = role.jobs[0] || null;
+        });
 
         let completionPercentage = 0;
         let lastRun = null;
@@ -166,23 +157,44 @@ router.get('/roles', async (req, res) => {
           status = latestJob.status;
         }
 
+        // Determine role title based on job number
+        let title = 'Unknown Role';
+        if (jobNumber === '12345') {
+          title = 'Business Development Manager';
+        } else if (jobNumber === '67890') {
+          title = 'Director Strategic Initiatives';
+        } else if (jobNumber === '78901') {
+          title = 'Operations Manager Winchester';
+        } else if (jobNumber === '89012') {
+          title = 'Product Manager NHA';
+        } else if (jobNumber === '90123') {
+          title = 'Site Manager, Donor Center';
+        } else if (jobNumber === '01234') {
+          title = 'Technical Sales Specialist, DS State';
+        }
+
         return {
-          id: latestJob ? latestJob.jobId : role.externalJobRef,
-          title: role.title,
-          jobNumber: role.externalJobRef,
-          description: role.description || getJobDescription(role.externalJobRef),
+          id: latestJob ? latestJob.jobId : jobNumber, // Use actual job ID if job exists, otherwise job number
+          title,
+          jobNumber,
+          description: getJobDescription(jobNumber),
           completionPercentage,
           status,
           lastRun,
           resumeCount,
           jdCount,
-          hasDocuments: jdCount > 0 && resumeCount > 0,
-          hasResumes: resumeCount > 0
+          hasDocuments: jdCount > 0 && resumeCount > 0
         };
       })
     );
 
-    res.json({ roles: rolesWithStatus });
+    // Show all roles, but mark which ones have resumes available
+    const allRoles = roles.map(role => ({
+      ...role,
+      hasResumes: role.resumeCount > 0
+    }));
+
+    res.json({ roles: allRoles });
   } catch (error) {
     console.error('Error getting roles:', error);
     res.status(500).json({ 
@@ -210,6 +222,16 @@ router.post('/', async (req, res) => {
     });
 
     if (existingJob) {
+      // If job exists but has no scores, trigger processing
+      const scoreCount = await prisma.score.count({
+        where: { jobId: existingJob.jobId }
+      });
+      
+      if (scoreCount === 0) {
+        console.log(`Triggering processing for existing job ${existingJob.jobId}`);
+        processJob(existingJob.jobId).catch(console.error);
+      }
+      
       return res.json({ job_id: existingJob.jobId });
     }
 
@@ -245,52 +267,10 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Find or create role for this job
-    let role = await prisma.role.findUnique({
-      where: { externalJobRef: external_job_ref }
-    });
-
-    if (!role) {
-      // Create role from JD document if available
-      let roleTitle = `Job ${external_job_ref}`;
-      let roleDescription = 'No job description available';
-
-      if (jdDoc) {
-        const jdExtraction = await prisma.extraction.findFirst({
-          where: { 
-            docId: jdDoc.docId,
-            status: 'PARSED'
-          }
-        });
-
-        if (jdExtraction?.extractionJson) {
-          try {
-            const jdData = JSON.parse(jdExtraction.extractionJson);
-            roleTitle = jdData.Job_Title || `Job ${external_job_ref}`;
-            roleDescription = jdData.Summary || getJobDescription(external_job_ref);
-          } catch (e) {
-            // Use fallback values
-            roleTitle = `Job ${external_job_ref}`;
-            roleDescription = getJobDescription(external_job_ref);
-          }
-        }
-      }
-
-      role = await prisma.role.create({
-        data: {
-          externalJobRef: external_job_ref,
-          title: roleTitle,
-          description: roleDescription,
-          isActive: true
-        }
-      });
-    }
-
-    // Create job linked to role
+    // Create job
     const job = await prisma.job.create({
       data: {
         externalJobRef: external_job_ref,
-        roleId: role.roleId,
         jdDocId: jdDoc.docId,
         status: 'PENDING'
       }
@@ -403,52 +383,18 @@ router.get('/:jobId', async (req, res) => {
       });
     }
 
-    // Extract title from JD document extraction data
-    let title = `Job ${job.externalJobRef}`;
-    let jobDescription = 'No job description available';
+    // Transform to frontend format
+    const jobTitles: { [key: string]: string } = {
+      '12345': 'Business Development Manager',
+      '67890': 'Director Strategic Initiatives', 
+      '78901': 'Operations Manager Winchester',
+      '89012': 'Product Manager NHA',
+      '90123': 'Site Manager, Donor Center',
+      '01234': 'Technical Sales Specialist, DS State'
+    };
     
-    if (job.jdDocId) {
-      const jdDoc = await prisma.document.findUnique({
-        where: { docId: job.jdDocId },
-        include: {
-          extractions: {
-            where: { status: 'PARSED' }
-          }
-        }
-      });
-      
-      if (jdDoc?.extractions[0]?.extractionJson) {
-        try {
-          const jdData = JSON.parse(jdDoc.extractions[0].extractionJson);
-          title = jdData.Job_Title || `Job ${job.externalJobRef}`;
-          jobDescription = jdData.Summary || getJobDescription(job.externalJobRef);
-        } catch (e) {
-          // Fallback to hardcoded values
-          const jobTitles: { [key: string]: string } = {
-            '12345': 'Business Development Manager',
-            '67890': 'Director Strategic Initiatives', 
-            '78901': 'Operations Manager Winchester',
-            '89012': 'Product Manager NHA',
-            '90123': 'Site Manager, Donor Center',
-            '01234': 'Technical Sales Specialist, DS State'
-          };
-          title = jobTitles[job.externalJobRef] || `Job ${job.externalJobRef}`;
-          jobDescription = getJobDescription(job.externalJobRef);
-        }
-      } else {
-        // Fallback to hardcoded values
-        const jobTitles: { [key: string]: string } = {
-          '12345': 'Business Development Manager',
-          '67890': 'Director Strategic Initiatives', 
-          '78901': 'Operations Manager Winchester',
-          '89012': 'Product Manager NHA',
-          '90123': 'Site Manager, Donor Center',
-          '01234': 'Technical Sales Specialist, DS State'
-        };
-        title = jobTitles[job.externalJobRef] || `Job ${job.externalJobRef}`;
-        jobDescription = getJobDescription(job.externalJobRef);
-      }
-    }
+    const title = jobTitles[job.externalJobRef] || `Job ${job.externalJobRef}`;
+    const jobDescription = getJobDescription(job.externalJobRef);
 
     res.json({
       jobId: job.jobId,

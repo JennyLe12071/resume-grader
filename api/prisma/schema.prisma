@@ -8,36 +8,27 @@ datasource db {
 }
 
 model Document {
-  docId       String       @id @default(cuid())
-  type        String
-  jobNumber   String
-  content     String
-  contentHash String
-  mimeType    String       @default("application/pdf")
-  uploadedAt  DateTime     @default(now())
-  extractions Extraction[]
-  jobResumes  JobResume[]
+  docId         String       @id @default(cuid())
+  docKey        String?      @unique // File path or identifier from IDP (nullable for migration)
+  type          String       // "JD" or "RESUME"
+  jobNumber     String
+  content       String?      // Keep for backward compatibility during migration
+  contentHash   String
+  mimeType      String       @default("application/pdf")
+  uploadedAt    DateTime     @default(now())
+  extractions   Extraction[]
+  jobResumes    JobResume[]
 }
 
 model Extraction {
-  extractionId   String   @id @default(cuid())
-  docId          String
-  idpRequestId   String?
-  extractionJson String?
-  status         String   @default("PENDING")
-  createdAt      DateTime @default(now())
-  document       Document @relation(fields: [docId], references: [docId], onDelete: Cascade)
-}
-
-model Role {
-  roleId         String   @id @default(cuid())
-  externalJobRef String   @unique
-  title          String
-  description    String?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  jobs           Job[]
+  extractionId      String   @id @default(cuid())
+  docId             String
+  idpRequestId      String?
+  extractionJson    String?
+  extractionVersion String   @default("v1")
+  status            String   @default("PENDING")
+  createdAt         DateTime @default(now())
+  document          Document @relation(fields: [docId], references: [docId], onDelete: Cascade)
 }
 
 model Job {
@@ -48,7 +39,7 @@ model Job {
   status         String      @default("PENDING")
   modelVersion   String      @default("v1")
   createdAt      DateTime    @default(now())
-  role           Role?       @relation(fields: [roleId], references: [roleId])
+  Role           Role?       @relation(fields: [roleId], references: [roleId])
   jobResumes     JobResume[]
   scores         Score[]
 }
@@ -56,8 +47,8 @@ model Job {
 model JobResume {
   jobId       String
   resumeDocId String
-  resume      Document @relation(fields: [resumeDocId], references: [docId], onDelete: Cascade)
   job         Job      @relation(fields: [jobId], references: [jobId], onDelete: Cascade)
+  resume      Document @relation(fields: [resumeDocId], references: [docId], onDelete: Cascade)
 
   @@id([jobId, resumeDocId])
 }
@@ -73,4 +64,15 @@ model Score {
   job          Job      @relation(fields: [jobId], references: [jobId], onDelete: Cascade)
 
   @@unique([jobId, resumeDocId, modelVersion])
+}
+
+model Role {
+  roleId         String   @id
+  externalJobRef String   @unique
+  title          String
+  description    String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+  Job            Job[]
 }

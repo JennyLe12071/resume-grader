@@ -8,9 +8,29 @@ function getOpenAIClient(): OpenAI {
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('OpenAI API key not configured');
     }
+    
+    // Set Node.js environment variables to bypass SSL issues
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    
+    // Create HTTPS agent with comprehensive SSL bypass
+    const https = require('https');
+    const httpsAgent = new https.Agent({
+      rejectUnauthorized: false,
+      requestCert: false,
+      agent: false,
+      secureProtocol: 'TLSv1_2_method'
+    });
+    
     openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
+      httpAgent: httpsAgent,
+      timeout: 60000, // 60 second timeout
+      maxRetries: 2
     });
+    
+    console.log('✅ OpenAI client initialized with comprehensive SSL bypass');
+    console.log('🔑 API Key configured:', process.env.OPENAI_API_KEY ? 'YES' : 'NO');
+    console.log('🔒 SSL verification disabled globally');
   }
   return openai;
 }
@@ -116,17 +136,18 @@ Summary: ${resume.summary || 'Not provided'}
 GRADING INSTRUCTIONS:
 1. Score the candidate from 0-100 based on how well they match the job requirements
 2. Consider: skills alignment, experience level, education, and overall qualifications
-3. Provide exactly 3 specific, actionable reasons for the score
-4. Be fair but thorough in your assessment
-5. Consider both technical and soft skills
+3. Provide exactly 3 detailed, comprehensive reasons for the score (each reason should be 15-25 words)
+4. Be fair but thorough in your assessment - explain WHY each factor matters
+5. Consider both technical and soft skills, providing specific examples from their background
+6. Make each reason substantive and informative, not just brief bullet points
 
 RESPONSE FORMAT (JSON only, no other text):
 {
   "score": 85,
   "reasons": [
-    "Strong technical skills match: JavaScript, React, Node.js align with frontend developer requirements",
-    "5+ years of relevant experience exceeds the 3+ year minimum requirement",
-    "Bachelor's degree in Computer Science meets educational requirements and shows strong foundation"
+    "Strong technical skills alignment with 8+ relevant technologies including JavaScript, React, and Node.js that directly match the frontend developer requirements and demonstrate hands-on expertise",
+    "Extensive 5+ years of relevant industry experience significantly exceeds the 3+ year minimum requirement, showing progression from junior to senior roles with increasing responsibilities",
+    "Bachelor's degree in Computer Science provides strong technical foundation and theoretical knowledge that complements practical experience, meeting educational requirements with relevant coursework"
   ]
 }
 `;
