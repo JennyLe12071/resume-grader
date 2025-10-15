@@ -37,7 +37,7 @@ npm start
 3. Watch real-time progress tracking
 4. View ranked results when complete
 
-## 📊 Current Data
+##  Current Data
 - **6 Jobs** ready to process
 - **54 Documents** stored (7 JDs + 47 resumes)
 - **Real-time progress** tracking with 3 phases
@@ -65,7 +65,7 @@ npm start
 └── README.md
 ```
 
-## 🔧 API Endpoints
+##  API Endpoints
 - `GET /api/jobs` - List all jobs
 - `POST /api/jobs` - Create new job
 - `GET /api/jobs/:id/status` - Job processing status
