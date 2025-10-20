@@ -201,9 +201,9 @@ export function RolesDashboard() {
             Refresh
           </button>
         </div>
-        <p>Upload files to SharePoint folders, then refresh to see job cards. Click Start to begin processing.</p>
+        <p>Upload files to File Share folders, then refresh to see job cards. Click Start to begin processing.</p>
         <p style={{ fontSize: '0.875rem', color: '#7f8c8d' }}>
-          Showing {roles.length} jobs from SharePoint
+          Showing {roles.length} jobs from File Share
         </p>
       </div>
 
@@ -318,13 +318,13 @@ export function RolesDashboard() {
           <div>
             <strong>1. Upload Files</strong>
             <p style={{ margin: '0.5rem 0 0 0', color: '#7f8c8d', fontSize: '0.875rem' }}>
-              Upload job descriptions and resumes to SharePoint folders
+              Upload job descriptions and resumes to File Share folders
             </p>
           </div>
           <div>
             <strong>2. Refresh Page</strong>
             <p style={{ margin: '0.5rem 0 0 0', color: '#7f8c8d', fontSize: '0.875rem' }}>
-              Click Refresh to see new job cards from SharePoint uploads
+              Click Refresh to see new job cards from File Share uploads
             </p>
           </div>
           <div>
