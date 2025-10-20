@@ -2,7 +2,7 @@
 
 AI-powered resume grading system that automatically scores and ranks job candidates against specific job descriptions.
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### 1. Configure API Keys
 Copy `api/env.example` to `api/.env` and add your API keys:
@@ -37,20 +37,20 @@ npm start
 3. Watch real-time progress tracking
 4. View ranked results when complete
 
-## 📊 Current Data
+##  Current Data
 - **6 Jobs** ready to process
 - **54 Documents** stored (7 JDs + 47 resumes)
 - **Real-time progress** tracking with 3 phases
 - **AI-powered grading** with detailed reasoning
 
-## 🏗️ Architecture
+##  Architecture
 - **Frontend**: React + Vite with real-time updates
 - **Backend**: Node.js + Express API
 - **Database**: SQLite with Prisma ORM
 - **AI**: OpenAI GPT-4 for resume grading
 - **Parsing**: MuleSoft IDP for document extraction
 
-## 📁 Project Structure
+##  Project Structure
 ```
 ├── api/                 # Backend API server
 │   ├── src/
@@ -65,11 +65,11 @@ npm start
 └── README.md
 ```
 
-## 🔧 API Endpoints
+##  API Endpoints
 - `GET /api/jobs` - List all jobs
 - `POST /api/jobs` - Create new job
 - `GET /api/jobs/:id/status` - Job processing status
 - `GET /api/jobs/:id/results` - Job rankings
 
-## ✅ Ready for Production
+##  Ready for Production
 The system is fully functional and ready to process your real documents with IDP and OpenAI integration.
